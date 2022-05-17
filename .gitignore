@@ -1,3 +1,26 @@
+# Project-specific
+*.laz
+*.las
+*.LAZ
+*.csv
+*.txt
+*.gml
+*.npz
+*.TIF
+*.tif
+*.qgz
+*.html
+*.png
+*.shp
+*.cpg
+*.dbf
+*.shx
+*.prj
+*.gpkg
+
+# Mac OS
+*.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

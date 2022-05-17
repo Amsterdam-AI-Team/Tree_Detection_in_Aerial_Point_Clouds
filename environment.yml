@@ -1,0 +1,24 @@
+name: hgb
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - jupyterlab
+  - ipympl
+  - ipywidgets
+  - numpy
+  - pandas
+  - shapely
+  - scipy
+  - flake8
+  - tqdm
+  - geopandas
+  - ca-certificates
+  - openssl
+  - hdbscan
+  - certifi
+  - scikit-image
+  - zarr
+  - open3d
