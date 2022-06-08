@@ -1,8 +1,15 @@
 # Installation instructions
 
+Installation:
 ```bash
+git clone https://github.com/Amsterdam-AI-Team/hoeveelheid_groen.git
+cd hoeveelheid_groen
+git checkout tree_detection
 conda env create -f environment.yml
+```
+
+Run the notebooks:
+```bash
 conda activate hgb
-pip install --no-deps https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/releases/download/v0.1/upcp-0.1-py3-none-any.whl
-pip install --no-deps laspy[lazrs]
+jupyter lab
 ```

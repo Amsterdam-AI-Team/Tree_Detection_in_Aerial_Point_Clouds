@@ -5,20 +5,21 @@ channels:
 dependencies:
   - python=3.9
   - pip
-  - jupyterlab
+  - flake8
+  - geopandas
+  - hdbscan
   - ipympl
   - ipywidgets
+  - jupyterlab
+  - numba
   - numpy
   - pandas
-  - shapely
-  - scipy
-  - flake8
-  - tqdm
-  - geopandas
-  - ca-certificates
-  - openssl
-  - hdbscan
-  - certifi
   - scikit-image
+  - scipy
+  - shapely
+  - tqdm
   - zarr
-  - open3d
+  - pip:
+    - open3d
+    - laspy[lazrs]
+    - https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/releases/download/v0.1/upcp-0.1-py3-none-any.whl
