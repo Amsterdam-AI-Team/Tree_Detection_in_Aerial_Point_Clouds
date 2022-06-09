@@ -6,6 +6,7 @@ dependencies:
   - python=3.9
   - pip
   - flake8
+  - contextily
   - geopandas
   - hdbscan
   - ipympl
@@ -17,6 +18,7 @@ dependencies:
   - scikit-image
   - scipy
   - shapely
+  - tifffile
   - tqdm
   - zarr
   - pip:

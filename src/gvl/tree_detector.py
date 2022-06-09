@@ -230,7 +230,7 @@ class DetectorTree:
         # grouped_points = grouped_points[grouped_points.xy_clusterID >= 0]
         # self.xy_grouped_points = grouped_points.rename(columns={'index_right': 'polygon_id'})
 
-    def kmean_cluster(self, xy_grouped_points, round_val):
+    def kmean_cluster(self, xy_grouped_points, round_val, min_dist):
         """
 
         :param xy_grouped_points: [GeoPandasDataFrame]: the points classified per polygon
@@ -268,7 +268,8 @@ class DetectorTree:
                 # actual kmeans clustering.
                 kmeans_labels = self.kmean_cluster_group(group=to_cluster,
                                                          name=name,
-                                                         round_val=round_val)
+                                                         round_val=round_val,
+                                                         min_dist=min_dist)
 
                 # Create the new labs dataframe
                 new_labs = pd.DataFrame(data={'labs': kmeans_labels,
@@ -308,7 +309,7 @@ class DetectorTree:
                      if '-1' not in row]
         self.kmean_grouped_points['Classification'] = pd.factorize(combi_ids)[0]
 
-    def kmean_cluster_group(self, group, name, round_val):
+    def kmean_cluster_group(self, group, name, round_val, min_dist):
         """
         Kmeans clustering performed on a subset (tree or cluster of trees) of points
 
@@ -329,7 +330,7 @@ class DetectorTree:
         n_clusters, coordinates = \
             find_n_clusters_peaks(cluster_data=cluster_data
                                   # distance is rounded to a multiple of the gridsize
-                                  , min_dist=1
+                                  , min_dist=min_dist
                                   , round_val=round_val
                                   )
 
