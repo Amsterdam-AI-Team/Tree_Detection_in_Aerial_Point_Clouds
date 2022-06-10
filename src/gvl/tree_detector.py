@@ -20,15 +20,14 @@ class DetectorTree:
 
     '''
 
-    def __init__(self, points, min_hag=2):
+    def __init__(self, points):
         """
         Initialize the tree class holding all the points
         :param box: a tuple of (xmin, xmax, ymin, ymax)
 
         """
 
-        self.raw_points = points[points['HAG'] >= min_hag]
-        # self.min_hag = min_hag
+        self.raw_points = points
 
         # Masks
         # self.hag_mask = self.raw_points['HAG'] >= self.min_hag
