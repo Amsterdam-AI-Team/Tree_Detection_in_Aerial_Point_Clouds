@@ -30,14 +30,10 @@ class DetectorTree:
         self.raw_points = points
 
         # Masks
-        # self.hag_mask = self.raw_points['HAG'] >= self.min_hag
-        # self.ground_mask = self.raw_points['Classification'] == 2
-        self.other_mask = self.raw_points['Classification'] == 1
-        self.n_returns_mask = self.raw_points['NumberOfReturns'] < 2
-        self.n_many_returns_mask = self.raw_points['ReturnNumber'] >= 1
-        # masks = np.vstack([self.ground_mask, self.n_returns_mask])
-        # self.masks = np.sum(masks, axis=0) == 0
-        self.masks = self.other_mask & ~self.n_returns_mask
+        self.n_returns_mask = self.raw_points['NumberOfReturns'] != 1
+        self.n_many_returns_mask = self.raw_points['ReturnNumber'] >= 1 # TODO not used
+
+        self.masks = self.n_returns_mask # TODO
 
         # initialize an empty DataFrames for writing to database later
         self.tree_coords = pd.DataFrame(data={'X': [],
@@ -181,7 +177,7 @@ class DetectorTree:
         :return: writes to self.xy_grouped_points
         """
         # remove ground points
-        cluster_points = self.raw_points[self.other_mask]
+        cluster_points = self.raw_points # TODO 
 
         cluster_data = former_preprocess_now_add_pid(
             cluster_points[['X', 'Y', 'Z', 'ReturnNumber', 'NumberOfReturns',
