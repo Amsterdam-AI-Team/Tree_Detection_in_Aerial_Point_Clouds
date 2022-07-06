@@ -29,12 +29,6 @@ class DetectorTree:
 
         self.raw_points = points
 
-        # Masks
-        self.n_returns_mask = self.raw_points['NumberOfReturns'] != 1
-        self.n_many_returns_mask = self.raw_points['ReturnNumber'] >= 1 # TODO not used
-
-        self.masks = self.n_returns_mask # TODO
-
         # initialize an empty DataFrames for writing to database later
         self.tree_coords = pd.DataFrame(data={'X': [],
                                               'Y': [],
@@ -58,7 +52,7 @@ class DetectorTree:
         :return: writes the points assigned with clusters to self.clustered_points
         """
 
-        masked_points = self.raw_points[self.masks]
+        masked_points = self.raw_points
         start = time.time()
         if xyz:
             xy = np.array([masked_points['X'], masked_points['Y'], masked_points['Z']]).T
