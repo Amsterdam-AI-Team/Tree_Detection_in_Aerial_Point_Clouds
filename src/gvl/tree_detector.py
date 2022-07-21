@@ -222,9 +222,6 @@ class DetectorTree:
                 labs.update(new_labs)
         self.kmean_grouped_points['value_clusterID'] = labs.labs * 10
 
-        for col in added_cols:
-            self.kmean_grouped_points[col] = eval(f'labs.{col}')
-
         # factorize the cluster labels
         combi_ids = ["".join(row) for row in
                      self.kmean_grouped_points[['value_clusterID', 'xy_clusterID']].values.astype(str)
