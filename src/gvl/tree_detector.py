@@ -36,9 +36,7 @@ class DetectorTree:
                                               })
         self.tree_df = GeoDataFrame({'xy_clusterID': [],
                                      'geometry': [],
-                                     "meanZ": [],
-                                     "n_pts": [],
-                                     "NZ": []})
+                                     "n_pts": []})
 
     def hdbscan_on_points(self, min_cluster_size, min_samples, xyz=False):
         """
@@ -66,8 +64,6 @@ class DetectorTree:
         clustered_points = pd.DataFrame({'X': masked_points['X'],
                                          'Y': masked_points['Y'],
                                          'Z': masked_points['Z'],
-                                         'HAG': masked_points['HAG'],
-                                         'NormalZ': masked_points['NZ'],
                                          'Classification': xy_clusterer.labels_})
         # remove "noise" points
         self.clustered_points = clustered_points[clustered_points.Classification >= 0]
@@ -116,48 +112,18 @@ class DetectorTree:
                 points = self.add_group_to_result(group, kmean_pols, name, points, wkt)
 
     def add_group_to_result(self, group, kmean_pols, name, points, wkt):
-        # if there are less than 3 points per square meter; it's not a tree
-        if (group.shape[0] / loads(wkt).area) <= 3:
-            try:
-                points = points.drop(points.groupby('Classification').get_group(name).index)
-                msg = f'dropped {name} because less than 3 pts/m2'
-            except:
-                msg = 'FAILED ' + msg
-                pass
-            print(msg)
-
         # if the area is larger than 800 m2; it's not a tree
-        elif kmean_pols and loads(wkt).area >= 800:
+        if kmean_pols and loads(wkt).area >= 800:
             try:
                 points = points.drop(points.groupby('Classification').get_group(name).index)
                 print(f'dropped {name} because polygon is too big')
             except:
                 pass
-
-        # If the tree is smaller than 2 meters, it's not a tree.
-        elif group.HAG.max() < 2:
-            try:
-                points = points.drop(points.groupby('Classification').get_group(name).index)
-                print(f'dropped {name} the so called tree is too small < 1.5 m')
-            except:
-                pass
-        # If most of the points point up; it's not a tree.
-        elif kmean_pols and group.NormalZ.mean() > 0.7:
-            try:
-                points = points.drop(points.groupby('Classification').get_group(name).index)
-                print(f'dropped {name} the so called tree is too flat nz > 0.7')
-            except:
-                pass
-
-        # If more selection criteria are wanted, they go here.
-
         else:
             # write to df
             self.tree_df.loc[len(self.tree_df)] = [int(name),
                                                    loads(wkt),
-                                                   group.HAG.mean(),
-                                                   group.shape[0],
-                                                   group.NormalZ.mean()]
+                                                   group.shape[0]]
         return points
 
     def find_points_in_polygons(self, polygon_df):
@@ -174,14 +140,12 @@ class DetectorTree:
         cluster_points = self.raw_points # TODO 
 
         cluster_data = former_preprocess_now_add_pid(
-            cluster_points[['X', 'Y', 'Z', 'ReturnNumber', 'NumberOfReturns',
-                            'HAG', 'NZ']])
+            cluster_points[['X', 'Y', 'Z']])
         xy = [Point(coords) for coords in zip(cluster_points['X'], cluster_points['Y'], cluster_points['Z'])]
         points_df = GeoDataFrame(cluster_data, geometry=xy)
 
         # find raw points without ground within the polygons.
         grouped_points = sjoin(points_df, polygon_df, how='left')
-        grouped_points.rename(columns={'NZ_left': 'NormalZ'}, inplace=True)
         grouped_points['X'] = grouped_points.geometry.apply(lambda p: p.x)
         grouped_points['Y'] = grouped_points.geometry.apply(lambda p: p.y)
 
@@ -194,30 +158,6 @@ class DetectorTree:
         print(f'Removed {np.array([grouped_points.xy_clusterID < 0]).sum()} noise points')
         grouped_points = grouped_points[grouped_points.xy_clusterID >= 0]
         self.xy_grouped_points = grouped_points.rename(columns={'index_right': 'polygon_id'})
-
-        # # remove ground points
-        # cluster_points = self.raw_points[self.n_many_returns_mask]
-        #
-        # cluster_data = former_preprocess_now_add_pid(
-        #     cluster_points[['X', 'Y', 'Z', 'ReturnNumber', 'NumberOfReturns',
-        #                     'HAG', 'NZ']])
-        # xy = [Point(coords) for coords in zip(cluster_points['X'], cluster_points['Y'], cluster_points['Z'])]
-        # points_df = GeoDataFrame(cluster_data, geometry=xy)
-        #
-        # # find raw points without ground within the polygons.
-        # grouped_points = sjoin(points_df, polygon_df, how='left')
-        # grouped_points['X'] = grouped_points.geometry.apply(lambda p: p.x)
-        # grouped_points['Y'] = grouped_points.geometry.apply(lambda p: p.y)
-        #
-        # # TODO no idea where the nans are coming from
-        # # dirty hack, hope not to many important points go missing
-        # print(f'removing {np.isnan(grouped_points.index_right).sum()} mystery nans <- merge_points_polygons')
-        # grouped_points = grouped_points[~np.isnan(grouped_points.index_right)]
-        #
-        # # remove noise
-        # print(f'Removed {np.array([grouped_points.xy_clusterID < 0]).sum()} noise points')
-        # grouped_points = grouped_points[grouped_points.xy_clusterID >= 0]
-        # self.xy_grouped_points = grouped_points.rename(columns={'index_right': 'polygon_id'})
 
     def kmean_cluster(self, xy_grouped_points, round_val, min_dist):
         """
@@ -232,9 +172,7 @@ class DetectorTree:
         # Initialize dataframes to write to
         to_cluster = pd.DataFrame(data={'pid': []})
         labs = pd.DataFrame(data={'labs': [0] * len(xy_grouped_points.pid),
-                                  'pid': xy_grouped_points.pid,
-                                  'HeightAboveGround': [0] * len(xy_grouped_points.pid),
-                                  'NZ': [0] * len(xy_grouped_points.pid)},
+                                  'pid': xy_grouped_points.pid},
 
                             index=xy_grouped_points.pid)
         self.kmean_grouped_points = xy_grouped_points.copy()
@@ -250,8 +188,7 @@ class DetectorTree:
             # A tree needs to be bigger than 2 meters^2 and have more than 10 points
             if name >= 0 and tree_area >= 2 and group.shape[0] >= 50:
                 group = group.drop(['geometry'], axis=1)
-                # run through second pdal filter
-                # to_cluster = self.second_filter(group.to_records())
+
                 to_cluster = group.copy()
 
                 # actual kmeans clustering.
@@ -262,9 +199,7 @@ class DetectorTree:
 
                 # Create the new labs dataframe
                 new_labs = pd.DataFrame(data={'labs': kmeans_labels,
-                                              'pid': to_cluster.pid,
-                                              'HeightAboveGround': to_cluster.HAG,
-                                              'NormalZ': to_cluster.NormalZ},
+                                              'pid': to_cluster.pid},
                                         index=to_cluster.pid)
 
                 # add the new labels to the labels dataframe
@@ -287,8 +222,6 @@ class DetectorTree:
                 labs.update(new_labs)
         self.kmean_grouped_points['value_clusterID'] = labs.labs * 10
 
-        # Add columns for adding to the polygons later
-        added_cols = ['HeightAboveGround', 'NZ']
         for col in added_cols:
             self.kmean_grouped_points[col] = eval(f'labs.{col}')
 
@@ -351,49 +284,3 @@ class DetectorTree:
             kmeans = KMeans(n_clusters=n_clusters, max_iter=1).fit(cluster_data)
 
         return kmeans.labels_
-
-    def second_filter(self, points):
-        out_points = points[points.HAG >= self.min_hag].copy()
-        return pd.DataFrame(out_points)
-
-    # def second_filter(self, points):
-    #     """
-    #     a second pdal filter. At the moment it is not used...
-    #
-    #     :param points: points on which to perform the filter
-    #     :return: [pd.DataFrame] of the filtered points.
-    #     """
-    #     pipeline_config = {
-    #         "pipeline": [
-    #             {
-    #                 "type": "filters.range",
-    #                 "limits": "HAG[0.5:)"
-    #             },
-    #             {
-    #                 "type": "filters.normal",
-    #                 "knn": 8
-    #             },
-    #             {
-    #                 "type": "filters.approximatecoplanar",
-    #                 "knn": 8,
-    #                 "thresh1": 25,
-    #                 "thresh2": 6
-    #             }
-    #         ]
-    #     }
-    #
-    #     try:
-    #         p = pdal.Pipeline(json.dumps(pipeline_config), arrays=[points])
-    #         p.validate()  # check if our JSON and options were good
-    #         p.execute()
-    #         # normalZ dissapears?
-    #         arrays = p.arrays
-    #         out_points = arrays[0]
-    #
-    #     except Exception as e:
-    #         trace = traceback.format_exc()
-    #         print(f'{points.shape[0]} points, probably not enough to second filter.')
-    #         print("Unexpected error:", trace)
-    #
-    #         out_points = points.copy()
-    #     return pd.DataFrame(out_points)

@@ -91,8 +91,7 @@ def former_preprocess_now_add_pid(points):
 def color_clusters(grouped_points):
     colors = get_colors(len(np.unique(grouped_points['Classification'])))
     output_dataframe = grouped_points[['pid',
-                                       'X', 'Y', 'Z',
-                                       'ReturnNumber', 'Classification']]
+                                       'X', 'Y', 'Z']]
     for i, color in enumerate(['Red', 'Green', 'Blue']):
         col = output_dataframe.apply(lambda row: colors[int(row['Classification'])][i], axis=1)
         output_dataframe.loc[:, color] = col
