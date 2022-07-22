@@ -3,7 +3,15 @@
 from random import sample
 import numpy as np
 import pandas as pd
+import re
+import os
+import pathlib
+import laspy
 from skimage.feature import peak_local_max
+from upcp.preprocessing import ahn_preprocessing
+
+
+DEFAULT_BOX_SIZE = 1000
 
 
 def round_to_val(a, round_val):
@@ -13,6 +21,89 @@ def round_to_val(a, round_val):
     :return: rounded numpy array
     """
     return np.round(np.array(a, dtype=float) / round_val) * round_val
+
+
+def roundup(x, N=DEFAULT_BOX_SIZE):
+    return x - x % -N
+
+
+def rounddown(x, N=DEFAULT_BOX_SIZE):
+    return x - x % +N
+
+
+def box_to_name(box, box_size):
+    (x_min, y_min, _, _) = box.bounds
+    return f'{x_min/box_size:.0f}_{y_min/box_size:.0f}'
+
+
+def get_tilecode_from_filename(filename):
+    """Extract the tile code from a file name."""
+    return re.match(r'.*(\d{3}_\d{3}).*', filename)[1]
+
+
+def get_bbox_from_tile_code(tile_code, padding=0,
+                            width=DEFAULT_BOX_SIZE, height=DEFAULT_BOX_SIZE):
+    """
+    Get the <X,Y> bounding box for a given tile code. The tile code is assumed
+    to represent the lower left corner of the tile.
+    Parameters
+    ----------
+    tile_code : str
+        The tile code, e.g. 2386_9702.
+    padding : float
+        Optional padding (in m) by which the bounding box will be extended.
+    width : int (default: 50)
+        The width of the tile.
+    height : int (default: 50)
+        The height of the tile.
+    Returns
+    -------
+    tuple of tuples
+        Bounding box with inverted y-axis: ((x_min, y_max), (x_max, y_min))
+    """
+    tile_split = tile_code.split('_')
+
+    # The tile code of each tile is defined as
+    # 'X-coordinaat/50'_'Y-coordinaat/50'
+    x_min = int(tile_split[0]) * width
+    y_min = int(tile_split[1]) * height
+
+    return ((x_min - padding, y_min + height + padding),
+            (x_min + height + padding, y_min - padding))
+
+
+def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
+    if type(ahn_las_file) == pathlib.PosixPath:
+        ahn_las_file = ahn_las_file.as_posix()
+    tile_code = get_tilecode_from_filename(ahn_las_file)
+
+    if out_folder != '':
+        pathlib.Path(out_folder).mkdir(parents=True, exist_ok=True)
+
+    ((x_min, y_max), (x_max, y_min)) = get_bbox_from_tile_code(tile_code)
+
+    ahn_las = laspy.read(ahn_las_file)
+
+    # Create a grid with 0.1m resolution
+    grid_y, grid_x = np.mgrid[y_max-resolution/2:y_min:-resolution,
+                              x_min+resolution/2:x_max:resolution]
+
+    # Methods for generating surfaces (grids)
+    ground_surface = ahn_preprocessing._get_ahn_surface(
+                                            ahn_las, grid_x, grid_y, 'idw',
+                                            ahn_preprocessing.AHN_GROUND)
+    building_surface = ahn_preprocessing._get_ahn_surface(
+                                            ahn_las, grid_x, grid_y, 'max',
+                                            ahn_preprocessing.AHN_BUILDING,
+                                            max_dist=1.5)
+
+    filename = os.path.join(out_folder, 'ahn_' + tile_code + '.npz')
+    np.savez_compressed(filename,
+                        x=grid_x[0, :],
+                        y=grid_y[:, 0],
+                        ground=ground_surface,
+                        building=building_surface)
+    return filename
 
 
 def find_n_clusters_peaks(cluster_data, round_val, min_dist):
