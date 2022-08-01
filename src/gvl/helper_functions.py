@@ -155,6 +155,27 @@ def calculate_normals(points_xyz):
     return normals
 
 
+def get_wl_box(points):
+    """ Get width and length of a cluster of points. """
+    polygon = sg.Polygon(points[:, :2])
+
+    # get the minimum bounding rectangle and zip coordinates into a list of
+    # point-tuples
+    mbr_points = list(zip(*polygon
+                          .minimum_rotated_rectangle
+                          .exterior.coords.xy))
+
+    # calculate the length of each side of the minimum bounding rectangle
+    mbr_lengths = [sg.LineString((mbr_points[i], mbr_points[i+1])).length
+                   for i in range(len(mbr_points) - 1)]
+
+    # get major/minor axis measurements
+    minor_axis = min(mbr_lengths)
+    major_axis = max(mbr_lengths)
+
+    return minor_axis, major_axis
+
+
 # From here based on
 # https://www.linkedin.com/pulse/bomen-herkennen-een-3d-puntenwolk-arno-timmer/
 
