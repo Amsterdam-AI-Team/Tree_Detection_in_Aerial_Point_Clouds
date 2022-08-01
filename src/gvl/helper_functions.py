@@ -1,5 +1,3 @@
-# Based on https://www.linkedin.com/pulse/bomen-herkennen-een-3d-puntenwolk-arno-timmer/
-
 from random import sample
 import numpy as np
 import pandas as pd
@@ -7,20 +5,14 @@ import re
 import os
 import pathlib
 import laspy
+import open3d as o3d
+import shapely.geometry as sg
 from skimage.feature import peak_local_max
 from upcp.preprocessing import ahn_preprocessing
+from upcp.utils import math_utils
 
 
 DEFAULT_BOX_SIZE = 1000
-
-
-def round_to_val(a, round_val):
-    """
-    :param a: numpy array to round
-    :param round_val: value to round to
-    :return: rounded numpy array
-    """
-    return np.round(np.array(a, dtype=float) / round_val) * round_val
 
 
 def roundup(x, N=DEFAULT_BOX_SIZE):
@@ -106,6 +98,75 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     return filename
 
 
+def label_tree_like_components(points, ground_z, point_components,
+                               tree_points, min_height):
+    """ If ground truth tree points are inside a cluster, we label them. """
+
+    tree_mask = np.zeros(len(points), dtype=bool)
+    tree_count = 0
+
+    if len(tree_points) == 0:
+        print('No reference tree points, skipping.')
+        return tree_mask
+
+    cc_labels = np.unique(point_components)
+
+    cc_labels = set(cc_labels).difference((-1,))
+
+    for cc in cc_labels:
+        # select points that belong to the cluster
+        cc_mask = (point_components == cc)
+
+        target_z = ground_z[cc_mask]
+        valid_values = target_z[np.isfinite(target_z)]
+
+        if valid_values.size != 0:
+            cc_z = np.mean(valid_values)
+            min_z = cc_z + min_height
+            cluster_height = np.amax(points[cc_mask][:, 2])
+            if min_z <= cluster_height:
+                mbrect, conv_hull, mbr_width, mbr_length, _ =\
+                    math_utils.minimum_bounding_rectangle(
+                                                    points[cc_mask][:, :2])
+                p1 = sg.Polygon(conv_hull)
+                for p2 in tree_points:
+                    do_overlap = p1.contains(p2)
+                    if do_overlap:
+                        tree_mask[cc_mask] = True
+                        tree_count += 1
+                        break
+
+    print(f'{tree_count} trees labelled.')
+
+    return tree_mask
+
+
+def calculate_normals(points_xyz):
+    object_pcd = o3d.geometry.PointCloud()
+    points = np.stack((points_xyz[:, 0], points_xyz[:, 1], points_xyz[:, 2]),
+                      axis=-1)
+    object_pcd.points = o3d.utility.Vector3dVector(points)
+    object_pcd.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.5,
+                                                              max_nn=30))
+
+    normals = np.matrix.round(np.array(object_pcd.normals), 2)
+
+    return normals
+
+
+# From here based on
+# https://www.linkedin.com/pulse/bomen-herkennen-een-3d-puntenwolk-arno-timmer/
+
+def round_to_val(a, round_val):
+    """
+    :param a: numpy array to round
+    :param round_val: value to round to
+    :return: rounded numpy array
+    """
+    return np.round(np.array(a, dtype=float) / round_val) * round_val
+
+
 def find_n_clusters_peaks(cluster_data, round_val, min_dist):
     """
     finds the number of local maxima and their coordinates in a pointcloud.
@@ -154,7 +215,8 @@ def interpolate_df(xyz_points, round_val):
     xyz_points['x_round'] = round_to_val(xyz_points.X, round_val)
     xyz_points['y_round'] = round_to_val(xyz_points.Y, round_val)
 
-    binned_data = xyz_points.groupby(['x_round', 'y_round'], as_index=False).max()
+    binned_data = xyz_points.groupby(
+                                ['x_round', 'y_round'], as_index=False).max()
 
     minx = min(binned_data.x_round)
     miny = min(binned_data.y_round)
@@ -184,23 +246,32 @@ def color_clusters(grouped_points):
     output_dataframe = grouped_points[['pid',
                                        'X', 'Y', 'Z']]
     for i, color in enumerate(['Red', 'Green', 'Blue']):
-        col = output_dataframe.apply(lambda row: colors[int(row['Classification'])][i], axis=1)
+        col = output_dataframe.apply(
+                lambda row: colors[int(row['Classification'])][i], axis=1)
         output_dataframe.loc[:, color] = col
 
     return output_dataframe
 
 
 def get_colors(n):
-    cols = 100 * [[0, 0, 0], [1, 0, 103], [213, 255, 0], [255, 0, 86], [158, 0, 142], [14, 76, 161], [255, 229, 2],
-                  [0, 95, 57], [0, 255, 0], [149, 0, 58], [255, 147, 126], [164, 36, 0], [0, 21, 68], [145, 208, 203],
-                  [98, 14, 0], [107, 104, 130], [0, 0, 255], [0, 125, 181], [106, 130, 108], [0, 174, 126],
-                  [194, 140, 159], [190, 153, 112], [0, 143, 156], [95, 173, 78], [255, 0, 0], [255, 0, 246],
-                  [255, 2, 157], [104, 61, 59], [255, 116, 163], [150, 138, 232], [152, 255, 82], [167, 87, 64],
-                  [1, 255, 254], [255, 238, 232], [254, 137, 0], [189, 198, 255], [1, 208, 255], [187, 136, 0],
-                  [117, 68, 177], [165, 255, 210], [255, 166, 254], [119, 77, 0], [122, 71, 130], [38, 52, 0],
-                  [0, 71, 84], [67, 0, 44], [181, 0, 255], [255, 177, 103], [255, 219, 102], [144, 251, 146],
-                  [126, 45, 210], [189, 211, 147], [229, 111, 254], [222, 255, 116], [0, 255, 120], [0, 155, 255],
-                  [0, 100, 1], [0, 118, 255], [133, 169, 0], [0, 185, 23], [120, 130, 49], [0, 255, 198],
+    cols = 100 * [[0, 0, 0], [1, 0, 103], [213, 255, 0], [255, 0, 86],
+                  [158, 0, 142], [14, 76, 161], [255, 229, 2],
+                  [0, 95, 57], [0, 255, 0], [149, 0, 58], [255, 147, 126],
+                  [164, 36, 0], [0, 21, 68], [145, 208, 203], [98, 14, 0],
+                  [107, 104, 130], [0, 0, 255], [0, 125, 181],
+                  [106, 130, 108], [0, 174, 126], [194, 140, 159],
+                  [190, 153, 112], [0, 143, 156], [95, 173, 78], [255, 0, 0],
+                  [255, 0, 246], [255, 2, 157], [104, 61, 59],
+                  [255, 116, 163], [150, 138, 232], [152, 255, 82],
+                  [167, 87, 64], [1, 255, 254], [255, 238, 232],
+                  [254, 137, 0], [189, 198, 255], [1, 208, 255], [187, 136, 0],
+                  [117, 68, 177], [165, 255, 210], [255, 166, 254],
+                  [119, 77, 0], [122, 71, 130], [38, 52, 0], [0, 71, 84],
+                  [67, 0, 44], [181, 0, 255], [255, 177, 103],
+                  [255, 219, 102], [144, 251, 146], [126, 45, 210],
+                  [189, 211, 147], [229, 111, 254], [222, 255, 116],
+                  [0, 255, 120], [0, 155, 255], [0, 100, 1], [0, 118, 255],
+                  [133, 169, 0], [0, 185, 23], [120, 130, 49], [0, 255, 198],
                   [255, 110, 65], [232, 94, 190]]
 
     return sample(cols, n)
