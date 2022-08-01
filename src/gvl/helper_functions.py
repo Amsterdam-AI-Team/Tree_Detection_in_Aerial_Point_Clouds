@@ -155,6 +155,7 @@ def calculate_normals(points_xyz):
     return normals
 
 
+# From https://stackoverflow.com/a/52173616
 def get_wl_box(points):
     """ Get width and length of a cluster of points. """
     polygon = sg.Polygon(points[:, :2])
