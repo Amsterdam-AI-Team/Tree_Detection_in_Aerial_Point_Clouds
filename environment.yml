@@ -1,0 +1,27 @@
+name: hgb
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - flake8
+  - contextily
+  - geopandas
+  - hdbscan
+  - ipympl
+  - ipywidgets
+  - jupyterlab
+  - numba
+  - numpy
+  - pandas
+  - scikit-image
+  - scipy
+  - shapely
+  - tifffile
+  - tqdm
+  - zarr
+  - pip:
+    - open3d
+    - laspy[lazrs]
+    - https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/releases/download/v0.1/upcp-0.1-py3-none-any.whl
