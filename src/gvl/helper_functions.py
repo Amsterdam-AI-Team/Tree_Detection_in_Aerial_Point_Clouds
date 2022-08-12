@@ -136,8 +136,6 @@ def label_tree_like_components(points, ground_z, point_components,
                         tree_count += 1
                         break
 
-    print(f'{tree_count} trees labelled.')
-
     return tree_mask
 
 
