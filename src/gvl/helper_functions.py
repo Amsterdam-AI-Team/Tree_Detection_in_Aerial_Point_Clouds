@@ -15,6 +15,14 @@ from upcp.utils import math_utils
 DEFAULT_BOX_SIZE = 1000
 
 
+def roundup(x, N=DEFAULT_BOX_SIZE):
+    return x - x % -N
+
+
+def rounddown(x, N=DEFAULT_BOX_SIZE):
+    return x - x % +N
+
+
 def box_to_name(box, box_size):
     (x_min, y_min, _, _) = box.bounds
     return f'{x_min/box_size:.0f}_{y_min/box_size:.0f}'
