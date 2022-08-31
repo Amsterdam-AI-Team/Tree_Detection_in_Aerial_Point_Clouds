@@ -2,10 +2,10 @@
 
 The [Actueel Hoogtebestand Nederland](https://www.ahn.nl/) (AHN) is the openly available elevation model of the Netherlands obtained by aerial laser scanning. 
 
-| ![Point cloud](./media/examples/capture0.png) | ![Objects above ground](./media/examples/capture1.png)|![Static objects](./media/examples/capture2.png) | ![Static objects](./media/examples/capture3.png) |
-|:---:|:---:|:---:|:---:|
+| ![Point cloud](./media/examples/capture0.png) | ![Objects above ground](./media/examples/capture1.png)|![Static objects](./media/examples/capture2.png) |
+|:---:|:---:|:---:|
 
-<b>Example:</b> (left) AHN classification. (left-middle) filtered on AHN 'Other' class. (right-middle) Tree and unknown classes kept. (right) RandLA-Net classification. <br/>
+<b>Example:</b> (left) AHN original classification. (middle) Preprocessing with the class labels: unknown, tree, noise and other. (right) RandLA-Net classification on the unknown class label. <br/>
 
 
 ---
