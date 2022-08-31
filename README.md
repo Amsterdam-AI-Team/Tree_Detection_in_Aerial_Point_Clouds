@@ -4,7 +4,7 @@ In this work, we show the use of data processing and deep 3D semantic segmentati
 - Tree localization
 - Tree canopy cover estimation (future work)
 
-The [Actueel Hoogtebestand Nederland](https://www.ahn.nl/) (AHN) is the openly available elevation model of the Netherlands obtained by aerial laser scanning. 
+The dataset used in this work is the [Actueel Hoogtebestand Nederland](https://www.ahn.nl/) (AHN), an openly available elevation model of the Netherlands obtained by aerial laser scanning. We downloaded the point cloud tiles from [geotiles.nl](http://geotiles.nl)
 
 | ![Point cloud](./media/examples/capture0.png) | ![Objects above ground](./media/examples/capture1.png)|![Static objects](./media/examples/capture2.png) |
 |:---:|:---:|:---:|
