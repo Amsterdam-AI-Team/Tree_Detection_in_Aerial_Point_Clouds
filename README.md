@@ -1,5 +1,9 @@
 # Tree Detection in Aerial Point Clouds
 
+In this work, we show the use of data processing and deep 3D semantic segmentation network for urban tree detection in aerial point clouds. Point cloud processing consists of a variety of tasks. A few examples are height above ground measuring, normal calculation, clustering and filtering based on point features. The semantic segmentation network classifies the points into either tree-like objects or non-tree-like objects. This work has two main objectives:
+- Tree localization
+- Tree canopy cover estimation (future work)
+
 The [Actueel Hoogtebestand Nederland](https://www.ahn.nl/) (AHN) is the openly available elevation model of the Netherlands obtained by aerial laser scanning. 
 
 | ![Point cloud](./media/examples/capture0.png) | ![Objects above ground](./media/examples/capture1.png)|![Static objects](./media/examples/capture2.png) |
