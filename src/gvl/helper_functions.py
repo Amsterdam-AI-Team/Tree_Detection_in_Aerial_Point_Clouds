@@ -153,6 +153,17 @@ def calculate_normals(points_xyz):
     return normals
 
 
+def voxel_downsample(points_xyz, voxel_size):
+    if points_xyz.shape[1] == 2:
+        points_xyz = np.stack((points_xyz[:, 0], points_xyz[:, 1],
+                               np.zeros_like(points_xyz[:, 0])), axis=-1)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points_xyz)
+    downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
+    downpts = np.asarray(downpcd.points)
+    return downpts
+
+
 # From https://stackoverflow.com/a/52173616
 def get_wl_box(points):
     """ Get width and length of a cluster of points. """
