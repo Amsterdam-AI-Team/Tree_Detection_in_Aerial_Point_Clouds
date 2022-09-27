@@ -154,14 +154,104 @@ def calculate_normals(points_xyz):
 
 
 def voxel_downsample(points_xyz, voxel_size):
-    if points_xyz.shape[1] == 2:
+    ndims = points_xyz.shape[1]
+    if ndims == 2:
         points_xyz = np.stack((points_xyz[:, 0], points_xyz[:, 1],
                                np.zeros_like(points_xyz[:, 0])), axis=-1)
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points_xyz)
     downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
     downpts = np.asarray(downpcd.points)
-    return downpts
+    if ndims == 2:
+        return downpts[:, :2]
+    else:
+        return downpts
+
+
+# Own work
+def split_loops(boundary):
+    pts = [j for i, j in boundary]
+    u, c = np.unique(pts, return_counts=True)
+    dups = u[c == 2]  # TODO: edge cases
+    if len(dups) == 0:
+        return [boundary]
+    loops = []
+    for dup in dups:
+        locs = np.where(pts == dup)[0]
+        if len(locs) != 2:
+            continue  # TODO: loops within loops
+        loop = pts[locs[0]:locs[1]]
+        loop.append(dup)
+        # The loop may potentially have loops itself. Add some recursion.
+        loops.append([(loop[i], loop[i+1]) for i in range(len(loop)-1)])
+        new_pts = pts[:locs[0]]
+        new_pts.extend(pts[locs[1]:])
+        pts = new_pts
+    pts.append(pts[0])
+    boundaries = [[(pts[i], pts[i+1]) for i in range(len(pts)-1)]]
+    boundaries.extend(loops)
+    return boundaries
+
+
+# https://stackoverflow.com/a/50714300
+# CC BY-SA 4.0
+def find_edges_with(i, edge_set):
+    i_first = [j for (x, j) in edge_set if x == i]
+    i_second = [j for (j, x) in edge_set if x == i]
+    return i_first, i_second
+
+
+# https://stackoverflow.com/a/50714300
+# CC BY-SA 4.0
+def stitch_boundaries(edges):
+    edge_set = edges.copy()
+    boundary_lst = []
+    while len(edge_set) > 0:
+        boundary = []
+        edge0 = edge_set.pop()
+        boundary.append(edge0)
+        last_edge = edge0
+        while len(edge_set) > 0:
+            i, j = last_edge
+            j_first, j_second = find_edges_with(j, edge_set)
+            if j_first:
+                edge_set.remove((j, j_first[0]))
+                edge_with_j = (j, j_first[0])
+                boundary.append(edge_with_j)
+                last_edge = edge_with_j
+            elif j_second:
+                edge_set.remove((j_second[0], j))
+                edge_with_j = (j, j_second[0])  # flip edge rep
+                boundary.append(edge_with_j)
+                last_edge = edge_with_j
+
+            if edge0[0] == last_edge[1]:
+                break
+
+        # boundary_lst.append(boundary)
+        boundary_lst.extend(split_loops(boundary))
+    return boundary_lst
+
+
+def boundary_to_poly(boundary, points):
+    xs = []
+    ys = []
+    for i, j in boundary:
+        xs.append(points[i, 0])
+        ys.append(points[i, 1])
+    xs.append(points[j, 0])
+    ys.append(points[j, 1])
+    return sg.Polygon([[x, y] for x, y in zip(xs, ys)])
+
+
+def generate_poly_from_edges(edges, points):
+    boundary_lst = stitch_boundaries(edges)
+    polys = [boundary_to_poly(b, points) for b in boundary_lst]
+    biggest = np.argmax([p.area for p in polys])
+    outer = polys.pop(biggest)
+    for inner in polys:
+        outer = outer - inner
+    return outer
 
 
 # From https://stackoverflow.com/a/52173616
