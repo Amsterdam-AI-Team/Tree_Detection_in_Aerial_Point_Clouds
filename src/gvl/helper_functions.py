@@ -245,13 +245,27 @@ def boundary_to_poly(boundary, points):
 
 
 def generate_poly_from_edges(edges, points):
+    def get_poly_with_hole(polys):
+        biggest = np.argmax([p.area for p in polys])
+        outer = polys.pop(biggest)
+        inners = []
+        for idx, poly in enumerate(polys):
+            if outer.contains(poly):
+                inners.append(idx)
+                outer = outer - poly
+        for index in sorted(inners, reverse=True):
+            del polys[index]
+        if type(outer) == sg.MultiPolygon:
+            return list(outer)
+        else:
+            return [outer]
+
     boundary_lst = stitch_boundaries(edges)
     polys = [boundary_to_poly(b, points) for b in boundary_lst]
-    biggest = np.argmax([p.area for p in polys])
-    outer = polys.pop(biggest)
-    for inner in polys:
-        outer = outer - inner
-    return outer
+    outers = []
+    while len(polys) > 0:
+        outers.extend(get_poly_with_hole(polys))
+    return outers
 
 
 # From https://stackoverflow.com/a/52173616
