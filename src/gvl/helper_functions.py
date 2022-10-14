@@ -1,15 +1,11 @@
-from random import sample
 import numpy as np
-import pandas as pd
 import re
 import os
 import pathlib
 import laspy
 import open3d as o3d
 import shapely.geometry as sg
-from skimage.feature import peak_local_max
 from upcp.preprocessing import ahn_preprocessing
-from upcp.utils import math_utils
 
 
 DEFAULT_BOX_SIZE = 1000
@@ -98,47 +94,6 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     return filename
 
 
-def label_tree_like_components(points, ground_z, point_components,
-                               tree_points, min_height):
-    """ If ground truth tree points are inside a cluster, we label them. """
-
-    tree_mask = np.zeros(len(points), dtype=bool)
-    tree_count = 0
-
-    if len(tree_points) == 0:
-        print('No reference tree points, skipping.')
-        return tree_mask
-
-    cc_labels = np.unique(point_components)
-
-    cc_labels = set(cc_labels).difference((-1,))
-
-    for cc in cc_labels:
-        # select points that belong to the cluster
-        cc_mask = (point_components == cc)
-
-        target_z = ground_z[cc_mask]
-        valid_values = target_z[np.isfinite(target_z)]
-
-        if valid_values.size != 0:
-            cc_z = np.mean(valid_values)
-            min_z = cc_z + min_height
-            cluster_height = np.amax(points[cc_mask][:, 2])
-            if min_z <= cluster_height:
-                mbrect, conv_hull, mbr_width, mbr_length, _ =\
-                    math_utils.minimum_bounding_rectangle(
-                                                    points[cc_mask][:, :2])
-                p1 = sg.Polygon(conv_hull)
-                for p2 in tree_points:
-                    do_overlap = p1.contains(p2)
-                    if do_overlap:
-                        tree_mask[cc_mask] = True
-                        tree_count += 1
-                        break
-
-    return tree_mask
-
-
 def calculate_normals(points_xyz):
     object_pcd = o3d.geometry.PointCloud()
     points = np.stack((points_xyz[:, 0], points_xyz[:, 1], points_xyz[:, 2]),
@@ -168,107 +123,8 @@ def voxel_downsample(points_xyz, voxel_size):
         return downpts
 
 
-# Own work
-def split_loops(boundary):
-    pts = [j for i, j in boundary]
-    u, c = np.unique(pts, return_counts=True)
-    dups = u[c == 2]  # TODO: edge cases
-    if len(dups) == 0:
-        return [boundary]
-    loops = []
-    for dup in dups:
-        locs = np.where(pts == dup)[0]
-        if len(locs) != 2:
-            continue  # TODO: loops within loops
-        loop = pts[locs[0]:locs[1]]
-        loop.append(dup)
-        # The loop may potentially have loops itself. Add some recursion.
-        loops.append([(loop[i], loop[i+1]) for i in range(len(loop)-1)])
-        new_pts = pts[:locs[0]]
-        new_pts.extend(pts[locs[1]:])
-        pts = new_pts
-    pts.append(pts[0])
-    boundaries = [[(pts[i], pts[i+1]) for i in range(len(pts)-1)]]
-    boundaries.extend(loops)
-    return boundaries
-
-
-# https://stackoverflow.com/a/50714300
-# CC BY-SA 4.0
-def find_edges_with(i, edge_set):
-    i_first = [j for (x, j) in edge_set if x == i]
-    i_second = [j for (j, x) in edge_set if x == i]
-    return i_first, i_second
-
-
-# https://stackoverflow.com/a/50714300
-# CC BY-SA 4.0
-def stitch_boundaries(edges):
-    edge_set = edges.copy()
-    boundary_lst = []
-    while len(edge_set) > 0:
-        boundary = []
-        edge0 = edge_set.pop()
-        boundary.append(edge0)
-        last_edge = edge0
-        while len(edge_set) > 0:
-            i, j = last_edge
-            j_first, j_second = find_edges_with(j, edge_set)
-            if j_first:
-                edge_set.remove((j, j_first[0]))
-                edge_with_j = (j, j_first[0])
-                boundary.append(edge_with_j)
-                last_edge = edge_with_j
-            elif j_second:
-                edge_set.remove((j_second[0], j))
-                edge_with_j = (j, j_second[0])  # flip edge rep
-                boundary.append(edge_with_j)
-                last_edge = edge_with_j
-
-            if edge0[0] == last_edge[1]:
-                break
-
-        # boundary_lst.append(boundary)
-        boundary_lst.extend(split_loops(boundary))
-    return boundary_lst
-
-
-def boundary_to_poly(boundary, points):
-    xs = []
-    ys = []
-    for i, j in boundary:
-        xs.append(points[i, 0])
-        ys.append(points[i, 1])
-    xs.append(points[j, 0])
-    ys.append(points[j, 1])
-    return sg.Polygon([[x, y] for x, y in zip(xs, ys)])
-
-
-def generate_poly_from_edges(edges, points):
-    def get_poly_with_hole(polys):
-        biggest = np.argmax([p.area for p in polys])
-        outer = polys.pop(biggest)
-        inners = []
-        for idx, poly in enumerate(polys):
-            if outer.contains(poly):
-                inners.append(idx)
-                outer = outer - poly
-        for index in sorted(inners, reverse=True):
-            del polys[index]
-        if type(outer) == sg.MultiPolygon:
-            return list(outer)
-        else:
-            return [outer]
-
-    boundary_lst = stitch_boundaries(edges)
-    polys = [boundary_to_poly(b, points) for b in boundary_lst]
-    outers = []
-    while len(polys) > 0:
-        outers.extend(get_poly_with_hole(polys))
-    return outers
-
-
 # From https://stackoverflow.com/a/52173616
+# CC BY-SA 4.0
 def get_wl_box(points):
     """ Get width and length of a cluster of points. """
     polygon = sg.Polygon(points[:, :2])
@@ -288,89 +144,3 @@ def get_wl_box(points):
     major_axis = max(mbr_lengths)
 
     return minor_axis, major_axis
-
-
-# From here based on
-# https://www.linkedin.com/pulse/bomen-herkennen-een-3d-puntenwolk-arno-timmer/
-
-def round_to_val(a, round_val):
-    """
-    :param a: numpy array to round
-    :param round_val: value to round to
-    :return: rounded numpy array
-    """
-    return np.round(np.array(a, dtype=float) / round_val) * round_val
-
-
-def find_n_clusters_peaks(cluster_data, round_val, min_dist):
-    """
-    finds the number of local maxima and their coordinates in a pointcloud.
-
-    :param cluster_data: dattaframe with X Y and Z values
-    :param round_val: the grid size of the raster to detect peaks in
-    :param min_dist: minimal distance of the peaks
-    :return: returns number of peaks and the coordinates of the peaks
-    """
-    img, minx, miny = interpolate_df(cluster_data, round_val)
-    indices = peak_local_max(img, min_distance=min_dist)
-    indices = [list(x) for x in set(tuple(b) for b in indices)]
-    n_clusters = len(indices)
-
-    mins = [[minx, miny, 0]] * n_clusters  # indices.shape[0]
-    z = [img[i[0], i[1]] for i in indices]
-    round_val_for_map = [round_val] * n_clusters
-    mapped = map(add_vectors, zip(indices, mins, z, round_val_for_map))
-    coordinates = [coord for coord in mapped]
-    coordinates = [list(x) for x in set(tuple(b) for b in coordinates)]
-
-    return max(1, n_clusters), coordinates
-
-
-def add_vectors(vec):
-    """
-    utility for summing vectors
-
-    :param vec: vectors to add. Should contain 3 values,
-     coordinates, minima and z values
-    :return: a vector of summed vectors
-    """
-    coords, mins, z, round_val = vec
-    y, x = coords
-    minx, miny, minz = mins
-    return [minx + (x * round_val), miny + (y * round_val), z]
-
-
-def interpolate_df(xyz_points, round_val):
-
-    xyz_points = xyz_points.T
-    xyz_points = pd.DataFrame({'X': xyz_points[0],
-                               'Y': xyz_points[1],
-                               'Z': xyz_points[2] ** 2})
-
-    xyz_points['x_round'] = round_to_val(xyz_points.X, round_val)
-    xyz_points['y_round'] = round_to_val(xyz_points.Y, round_val)
-
-    binned_data = xyz_points.groupby(
-                                ['x_round', 'y_round'], as_index=False).max()
-
-    minx = min(binned_data.x_round)
-    miny = min(binned_data.y_round)
-
-    x_arr = binned_data.x_round - min(binned_data.x_round)
-    y_arr = binned_data.y_round - min(binned_data.y_round)
-
-    img_size_x = int(round(max(x_arr), 1))
-    img_size_y = int(round(max(y_arr), 1))
-
-    img = np.zeros([img_size_y + 1, img_size_x + 1])
-
-    img[round_to_val(y_arr / round_val, 1).astype(np.int),
-        round_to_val(x_arr / round_val, 1).astype(np.int)] = binned_data.Z
-
-    return img, minx, miny
-
-
-def former_preprocess_now_add_pid(points):
-    f_pts = pd.DataFrame(points)
-    f_pts['pid'] = f_pts.index
-    return f_pts
