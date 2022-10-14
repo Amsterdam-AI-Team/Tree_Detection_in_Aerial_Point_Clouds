@@ -1,11 +1,18 @@
 # Tree Detection in Aerial Point Clouds
 
-In this work, we show the use of data processing and deep 3D semantic segmentation network for urban tree detection in aerial point clouds. Point cloud processing consists of a variety of tasks. A few examples are height above ground measuring, normal calculation, clustering and filtering based on point features. The semantic segmentation model classifies the points into either tree-like objects or non-tree-like objects. The model achieves a mean Intersection over Union (mIoU) score of 96% on ten (9/1 train/val split) AHN sub-tiles re-labelled for this project. The dataset used in this work is the [Actueel Hoogtebestand Nederland](https://www.ahn.nl/) (AHN), an openly available elevation model of the Netherlands obtained by aerial laser scanning. We downloaded the point cloud tiles from [geotiles.nl](http://geotiles.nl)
+This repository contains code to automatically extract solitary trees and tree-clusters from aerial point clouds of the [Actueel Hoogtebestand Nederland](https://www.ahn.nl/) (AHN4), an openly available elevation model of the Netherlands obtained by aerial laser scanning. The point cloud tiles can be downloaded from [geotiles.nl](http://geotiles.nl).
 
-| ![Point cloud](./media/examples/capture0.png) | ![Objects above ground](./media/examples/capture1.png)|![Static objects](./media/examples/capture2.png) |
+The pipeline consists of four steps (see the [`notebooks`](./notebooks)):
+0. Pre-processing the raw AHN data by generating subtiles of manageable size and computing the DTM.
+1. Extracting trees by using existing labels in the AHN4 data, combined with filters based on point attributes such as normals, reflectance, and return number.
+2. Generating GeoTIFF rasters of the results.
+3. Generating polygons of the found trees and tree-clusters using the _alpha shape_ method to compute concave hulls.
+
+<b>Example:</b>
+
+| ![Raw AHN4 point cloud](./media/examples/ahn4_raw.png) | ![Extracted trees](./media/examples/ahn4_trees.png) | ![Extracted tree shapes](./media/examples/tree_shapes.png) |
 |:---:|:---:|:---:|
-
-<b>Example:</b> (left) AHN original classification. (middle) Preprocessing with the class labels: unknown, tree, noise and other. (right) RandLA-Net classification on the unknown class label. <br/>
+| Raw AHN4 point cloud | Extracted trees | Tree shapes |
 
 
 ---
@@ -14,7 +21,9 @@ In this work, we show the use of data processing and deep 3D semantic segmentati
 
  * [`media/examples`](./media/examples) _Visuals_
  * [`notebooks`](./notebooks) _Jupyter notebook tutorials_
- * [`src/gvl`](./src/upc_sw) _Python source code_
+ * [`src/gvl`](./src/upc_sw) _Python helper functions_
+
+ The code assumes raw AHN4 point cloud tiles are stored in `datasets/AHN4/Source/`.
 
 ---
 

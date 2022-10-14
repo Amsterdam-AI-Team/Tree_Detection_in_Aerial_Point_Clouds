@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.9
   - pip
+  - gdal
   - geopandas
   - ipympl
   - ipywidgets
@@ -12,6 +13,7 @@ dependencies:
   - numpy
   - pandas
   - scikit-image
+  - scipy
   - shapely
   - tqdm
   - pip:
