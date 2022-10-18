@@ -17,6 +17,7 @@
 *.shx
 *.prj
 *.gpkg
+*.tfw
 
 # Mac OS
 *.DS_Store

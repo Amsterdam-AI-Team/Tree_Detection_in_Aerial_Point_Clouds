@@ -1,15 +1,11 @@
-from random import sample
 import numpy as np
-import pandas as pd
 import re
 import os
 import pathlib
 import laspy
 import open3d as o3d
 import shapely.geometry as sg
-from skimage.feature import peak_local_max
 from upcp.preprocessing import ahn_preprocessing
-from upcp.utils import math_utils
 
 
 DEFAULT_BOX_SIZE = 1000
@@ -98,47 +94,6 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     return filename
 
 
-def label_tree_like_components(points, ground_z, point_components,
-                               tree_points, min_height):
-    """ If ground truth tree points are inside a cluster, we label them. """
-
-    tree_mask = np.zeros(len(points), dtype=bool)
-    tree_count = 0
-
-    if len(tree_points) == 0:
-        print('No reference tree points, skipping.')
-        return tree_mask
-
-    cc_labels = np.unique(point_components)
-
-    cc_labels = set(cc_labels).difference((-1,))
-
-    for cc in cc_labels:
-        # select points that belong to the cluster
-        cc_mask = (point_components == cc)
-
-        target_z = ground_z[cc_mask]
-        valid_values = target_z[np.isfinite(target_z)]
-
-        if valid_values.size != 0:
-            cc_z = np.mean(valid_values)
-            min_z = cc_z + min_height
-            cluster_height = np.amax(points[cc_mask][:, 2])
-            if min_z <= cluster_height:
-                mbrect, conv_hull, mbr_width, mbr_length, _ =\
-                    math_utils.minimum_bounding_rectangle(
-                                                    points[cc_mask][:, :2])
-                p1 = sg.Polygon(conv_hull)
-                for p2 in tree_points:
-                    do_overlap = p1.contains(p2)
-                    if do_overlap:
-                        tree_mask[cc_mask] = True
-                        tree_count += 1
-                        break
-
-    return tree_mask
-
-
 def calculate_normals(points_xyz):
     object_pcd = o3d.geometry.PointCloud()
     points = np.stack((points_xyz[:, 0], points_xyz[:, 1], points_xyz[:, 2]),
@@ -153,7 +108,23 @@ def calculate_normals(points_xyz):
     return normals
 
 
+def voxel_downsample(points_xyz, voxel_size):
+    ndims = points_xyz.shape[1]
+    if ndims == 2:
+        points_xyz = np.stack((points_xyz[:, 0], points_xyz[:, 1],
+                               np.zeros_like(points_xyz[:, 0])), axis=-1)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points_xyz)
+    downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
+    downpts = np.asarray(downpcd.points)
+    if ndims == 2:
+        return downpts[:, :2]
+    else:
+        return downpts
+
+
 # From https://stackoverflow.com/a/52173616
+# CC BY-SA 4.0
 def get_wl_box(points):
     """ Get width and length of a cluster of points. """
     polygon = sg.Polygon(points[:, :2])
@@ -173,89 +144,3 @@ def get_wl_box(points):
     major_axis = max(mbr_lengths)
 
     return minor_axis, major_axis
-
-
-# From here based on
-# https://www.linkedin.com/pulse/bomen-herkennen-een-3d-puntenwolk-arno-timmer/
-
-def round_to_val(a, round_val):
-    """
-    :param a: numpy array to round
-    :param round_val: value to round to
-    :return: rounded numpy array
-    """
-    return np.round(np.array(a, dtype=float) / round_val) * round_val
-
-
-def find_n_clusters_peaks(cluster_data, round_val, min_dist):
-    """
-    finds the number of local maxima and their coordinates in a pointcloud.
-
-    :param cluster_data: dattaframe with X Y and Z values
-    :param round_val: the grid size of the raster to detect peaks in
-    :param min_dist: minimal distance of the peaks
-    :return: returns number of peaks and the coordinates of the peaks
-    """
-    img, minx, miny = interpolate_df(cluster_data, round_val)
-    indices = peak_local_max(img, min_distance=min_dist)
-    indices = [list(x) for x in set(tuple(b) for b in indices)]
-    n_clusters = len(indices)
-
-    mins = [[minx, miny, 0]] * n_clusters  # indices.shape[0]
-    z = [img[i[0], i[1]] for i in indices]
-    round_val_for_map = [round_val] * n_clusters
-    mapped = map(add_vectors, zip(indices, mins, z, round_val_for_map))
-    coordinates = [coord for coord in mapped]
-    coordinates = [list(x) for x in set(tuple(b) for b in coordinates)]
-
-    return max(1, n_clusters), coordinates
-
-
-def add_vectors(vec):
-    """
-    utility for summing vectors
-
-    :param vec: vectors to add. Should contain 3 values,
-     coordinates, minima and z values
-    :return: a vector of summed vectors
-    """
-    coords, mins, z, round_val = vec
-    y, x = coords
-    minx, miny, minz = mins
-    return [minx + (x * round_val), miny + (y * round_val), z]
-
-
-def interpolate_df(xyz_points, round_val):
-
-    xyz_points = xyz_points.T
-    xyz_points = pd.DataFrame({'X': xyz_points[0],
-                               'Y': xyz_points[1],
-                               'Z': xyz_points[2] ** 2})
-
-    xyz_points['x_round'] = round_to_val(xyz_points.X, round_val)
-    xyz_points['y_round'] = round_to_val(xyz_points.Y, round_val)
-
-    binned_data = xyz_points.groupby(
-                                ['x_round', 'y_round'], as_index=False).max()
-
-    minx = min(binned_data.x_round)
-    miny = min(binned_data.y_round)
-
-    x_arr = binned_data.x_round - min(binned_data.x_round)
-    y_arr = binned_data.y_round - min(binned_data.y_round)
-
-    img_size_x = int(round(max(x_arr), 1))
-    img_size_y = int(round(max(y_arr), 1))
-
-    img = np.zeros([img_size_y + 1, img_size_x + 1])
-
-    img[round_to_val(y_arr / round_val, 1).astype(np.int),
-        round_to_val(x_arr / round_val, 1).astype(np.int)] = binned_data.Z
-
-    return img, minx, miny
-
-
-def former_preprocess_now_add_pid(points):
-    f_pts = pd.DataFrame(points)
-    f_pts['pid'] = f_pts.index
-    return f_pts
