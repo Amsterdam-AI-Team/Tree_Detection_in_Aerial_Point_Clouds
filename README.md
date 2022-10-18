@@ -3,6 +3,7 @@
 This repository contains code to automatically extract solitary trees and tree-clusters from aerial point clouds of the [Actueel Hoogtebestand Nederland](https://www.ahn.nl/) (AHN4), an openly available elevation model of the Netherlands obtained by aerial laser scanning. The point cloud tiles can be downloaded from [geotiles.nl](http://geotiles.nl).
 
 The pipeline consists of four steps (see the [`notebooks`](./notebooks)):
+
 0. Pre-processing the raw AHN data by generating subtiles of manageable size and computing the DTM.
 1. Extracting trees by using existing labels in the AHN4 data, combined with filters based on point attributes such as normals, reflectance, and return number.
 2. Generating GeoTIFF rasters of the results.
