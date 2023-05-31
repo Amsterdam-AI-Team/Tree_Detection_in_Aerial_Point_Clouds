@@ -16,6 +16,9 @@ dependencies:
   - scipy
   - shapely
   - tqdm
+  - contextily
+  - matplotlib
+  - pyshp
   - pip:
     - open3d
     - laspy[lazrs]
