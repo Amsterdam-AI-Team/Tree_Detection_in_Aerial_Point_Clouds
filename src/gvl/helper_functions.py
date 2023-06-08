@@ -24,9 +24,9 @@ def box_to_name(box, box_size):
     return f'{x_min/box_size:.0f}_{y_min/box_size:.0f}'
 
 
-def get_tilecode_from_filename(filename):
+def get_tilecode_from_filename(filename, n_digits=3):
     """Extract the tile code from a file name."""
-    return re.match(r'.*(\d{3}_\d{3}).*', filename)[1]
+    return re.match(fr'.*(\d{{{n_digits}}}_\d{{{n_digits}}}).*', filename)[1]
 
 
 def get_bbox_from_tile_code(tile_code, padding=0,
