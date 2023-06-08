@@ -1,4 +1,4 @@
-name: hgb
+name: ahn-tree
 channels:
   - conda-forge
   - defaults
