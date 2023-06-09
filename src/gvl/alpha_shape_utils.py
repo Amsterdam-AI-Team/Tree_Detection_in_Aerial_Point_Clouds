@@ -156,32 +156,3 @@ def generate_poly_from_edges(edges, points):
     while len(polys) > 0:
         outers.extend(get_poly_with_hole(polys))
     return outers
-
-
-#  Versie in UPCP repo
-#def generate_poly_from_edges(edges, points):
-#    def get_poly_with_hole(polys):
-#        biggest = np.argmax([p.area for p in polys])
-#        outer = polys.pop(biggest)
-#        inners = []
-#        for idx, poly in enumerate(polys):
-#            with warnings.catch_warnings(record=True) as w:
-#                # TODO: prevent warning in the first place
-#                if outer.contains(poly):
-#                    inners.append(idx)
-#                    if len(w) == 0:
-#                        outer = outer - poly
-#        for index in sorted(inners, reverse=True):
-#            del polys[index]
-#        if type(outer) == sg.MultiPolygon:
-#            return outer.geoms
-#        else:
-#            return [outer]
-#
-#    boundary_lst = stitch_boundaries(edges)
-#    polys = [boundary_to_poly(b, points) for b in boundary_lst
-#             if len(b) >= 3]
-#    outers = []
-#    while len(polys) > 0:
-#        outers.extend(get_poly_with_hole(polys))
-#    return outers
