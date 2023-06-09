@@ -14,7 +14,7 @@ The pipeline consists of six steps (see the [`notebooks`](./notebooks)):
 <b>Example:</b>
 
 | ![Raw AHN4 point cloud](./media/examples/final_image_raw_ahn.png) | ![Extracted trees](./media/examples/final_image_extracted.png) |
-|:---:|:---:|:---:|
+|:---:|:---:|
 | Raw AHN4 point cloud | Extracted trees |
 
 | ![Tree shapes](./media/examples/final_image_step3.png) | ![Tree trunks](./media/examples/final_image_step4.png) | ![Analysis](./media/examples/final_image_step5.png) |
