@@ -146,7 +146,7 @@ def generate_poly_from_edges(edges, points):
         for index in sorted(inners, reverse=True):
             del polys[index]
         if type(outer) == sg.MultiPolygon:
-            return list(outer)
+            return outer.geoms
         else:
             return [outer]
 
