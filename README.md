@@ -51,6 +51,10 @@ The pipeline consists of six steps (see the [`notebooks`](./notebooks)):
 
 We provide tutorial [notebooks](notebooks) that demonstrate how the code can be used. This repository was designed to be used with the specific data source: AHN. AHN4 point clouds can be downloaded from [ArcGIS](https://www.arcgis.com/apps/Embed/index.html?appid=a3dfa5a818174aa787392e461c80f781) or [GeoTiles](https://geotiles.nl).
 
+## Performance
+
+We tested the pipeline on ground truth data of 600+ trees in several neighbourhoods in the Southeast and East of Amsterdam. Here, the model performed relatively well on solitary trees (recall of ~0.8) and not so well on dense clusters of trees (recall of 0.3-0.7). Overall precision was around 0.6.
+
 ## Contributing
 
 Feel free to help out! [Open an issue](https://github.com/Amsterdam-AI-Team/Tree_Detection_in_Aerial_Point_Clouds/issues), submit a [PR](https://github.com/Amsterdam-AI-Team/Tree_Detection_in_Aerial_Point_Clouds/pulls) or [contact us](https://amsterdamintelligence.com/contact/).
