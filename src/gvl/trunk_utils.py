@@ -16,7 +16,7 @@ class Point:
 
     def add_path(self, path):
         self.paths = np.append(self.paths, path)
-        
+
 
 class Path:
     index = None
@@ -28,8 +28,8 @@ class Path:
 
     def add_point(self, this_point):
         self.points = np.append(self.points, this_point)
-        
-        
+
+
 class Network:
     index = None
     paths = []

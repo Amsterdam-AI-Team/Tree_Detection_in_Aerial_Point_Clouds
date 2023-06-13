@@ -24,8 +24,7 @@ def alpha_shape(points, alpha, only_outer=True):
         """
         if (i, j) in edges or (j, i) in edges:
             # already added
-            assert (j, i) in edges, (
-                "Can't go twice over same directed edge right?")
+            assert (j, i) in edges, "Can't go twice over same directed edge right?"
             if only_outer:
                 # if both neighboring triangles are in shape, it is not a
                 # boundary edge
@@ -108,15 +107,15 @@ def split_loops(boundary):
         locs = np.where(pts == dup)[0]
         if len(locs) != 2:
             continue  # TODO: loops within loops
-        loop = pts[locs[0]:locs[1]]
+        loop = pts[locs[0] : locs[1]]
         loop.append(dup)
         # The loop may potentially have loops itself. Add some recursion.
-        loops.append([(loop[i], loop[i+1]) for i in range(len(loop)-1)])
-        new_pts = pts[:locs[0]]
-        new_pts.extend(pts[locs[1]:])
+        loops.append([(loop[i], loop[i + 1]) for i in range(len(loop) - 1)])
+        new_pts = pts[: locs[0]]
+        new_pts.extend(pts[locs[1] :])
         pts = new_pts
     pts.append(pts[0])
-    boundaries = [[(pts[i], pts[i+1]) for i in range(len(pts)-1)]]
+    boundaries = [[(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]]
     boundaries.extend(loops)
     return boundaries
 
