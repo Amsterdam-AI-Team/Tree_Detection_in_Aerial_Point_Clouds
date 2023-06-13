@@ -53,7 +53,7 @@ We provide tutorial [notebooks](notebooks) that demonstrate how the code can be 
 
 ## Performance
 
-We tested the pipeline on ground truth data of 600+ trees in several neighbourhoods in the Southeast and East of Amsterdam. Here, the model performed relatively well on solitary trees (recall of ~0.8) and not so well on dense clusters of trees (recall of 0.3-0.7). Overall precision was around 0.6.
+We tested the pipeline on ground truth data of 600+ trees in several neighbourhoods in the Southeast and East of Amsterdam. Here, the detection and localization of individual tree trunks worked relatively well for solitary trees (recall of ~0.8) and not so well for dense clusters of trees (recall of 0.3-0.7). Overall precision was around 0.6.
 
 ## Contributing
 
