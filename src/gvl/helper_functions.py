@@ -1,3 +1,5 @@
+"""Functions for dealing with point cloud data (nb0, 1, 2, 3)"""
+
 import os
 import pathlib
 import re

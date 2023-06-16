@@ -1,3 +1,5 @@
+"""Classes to aid localization of trunks (nb4)"""
+
 import numpy as np
 
 

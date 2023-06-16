@@ -1,3 +1,5 @@
+"""Functions related to extracting tree shapes (nb3)"""
+
 import numpy as np
 import shapely.geometry as sg
 from scipy.spatial import Delaunay
