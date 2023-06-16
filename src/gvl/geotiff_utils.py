@@ -1,3 +1,5 @@
+"""Functions for creating a GeoTIFF raster (nb2)"""
+
 import numpy as np
 from osgeo import gdal, osr
 from scipy.stats import binned_statistic_2d

@@ -1,3 +1,5 @@
+"""Functions for dealing with point cloud data (nb0, 1, 2, 3)"""
+
 import os
 import pathlib
 import re
@@ -11,12 +13,12 @@ from upcp.preprocessing import ahn_preprocessing
 DEFAULT_BOX_SIZE = 1000
 
 
-def roundup(x, N=DEFAULT_BOX_SIZE):
-    return x - x % -N
+def roundup(x, n=DEFAULT_BOX_SIZE):
+    return x - x % -n
 
 
-def rounddown(x, N=DEFAULT_BOX_SIZE):
-    return x - x % +N
+def rounddown(x, n=DEFAULT_BOX_SIZE):
+    return x - x % +n
 
 
 def box_to_name(box, box_size):

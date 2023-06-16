@@ -1,3 +1,5 @@
+"""Classes to aid localization of trunks (nb4)"""
+
 import numpy as np
 
 
@@ -8,7 +10,7 @@ class Point:
     network = None
     vec = None
     linked_to = None
-    treeID = None
+    tree_id = None
 
     def __init__(self, index, position):
         self.index = index
